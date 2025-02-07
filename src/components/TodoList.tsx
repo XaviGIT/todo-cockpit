@@ -116,7 +116,13 @@ export default function TodoList({ categories, selectedCategory }: Props) {
       </div>
 
       {filteredTodos.map(todo => (
-        <TodoItem key={todo.id} todo={todo} labels={labels} onUpdate={updateTodo} />
+        <TodoItem
+          key={todo.id}
+          todo={todo}
+          labels={labels}
+          onUpdate={updateTodo}
+          categories={categories}
+        />
       ))}
     </div>
   )
