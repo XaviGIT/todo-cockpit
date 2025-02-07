@@ -1,4 +1,7 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+This is yet another Todo app, this time using the cockpit technique.
+It separates the items into a maximum of 5 categories, one for each area of work/life defined by the user.
+It allows also to mark the most valuable ones as important, assign due dates and labels.
+Every Todo item should be writen as an actionable item.
 
 ## Getting Started
 
@@ -14,23 +17,28 @@ pnpm dev
 bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Components Created:
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+- CategoryList (category selection)
+- TodoList (main todo management)
+- TodoItem (individual todo display/edit)
+- DatePicker (due date selection)
+- LabelPicker (label management)
+- CategorySelect (category dropdown)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Functionality Working:
 
-## Learn More
+- Add/complete todos
+- Set due dates
+- Mark as important
+- Add/edit labels
+- Filter by category
+- Filter by status (ALL/ACTIVE/COMPLETED)
 
-To learn more about Next.js, take a look at the following resources:
+## Next Steps:
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
-
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
-
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- Category editing in TodoItem
+- Edit todo titles
+- Connect to backend
+- Persist data
+- Add authentication

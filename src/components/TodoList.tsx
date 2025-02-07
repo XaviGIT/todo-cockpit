@@ -77,7 +77,7 @@ export default function TodoList({ categories, selectedCategory }: Props) {
             value={newTodoTitle}
             onChange={e => setNewTodoTitle(e.target.value)}
             className="flex-1 rounded-lg border p-2 text-gray-900 placeholder:text-gray-500"
-            placeholder="Add new todo..."
+            placeholder="What's the next concrete step?"
           />
           <CategorySelect
             categories={categories}
