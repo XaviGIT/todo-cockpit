@@ -7,7 +7,7 @@ import { useCategories, useCategoryMutations } from '@/app/hooks/api'
 import { Category } from '@/types/category'
 
 export default function Home() {
-  const { data: categories = [] } = useCategories()
+  const { data: categories = [], isLoading: loadingCategories } = useCategories()
   const [selectedCategory, setSelectedCategory] = useState<string>()
   const { addCategory, updateCategory, deleteCategory } = useCategoryMutations()
 
@@ -23,36 +23,71 @@ export default function Home() {
     deleteCategory.mutate(id)
   }
 
-  // Debug the selected category
-  console.log('Selected category:', selectedCategory)
-  console.log('Available categories:', categories)
+  // Get the selected category name
+  const selectedCategoryName = selectedCategory
+    ? categories.find((c: Category) => c.id === selectedCategory)?.name
+    : undefined
 
   return (
-    <main className="mx-auto flex min-h-screen max-w-6xl gap-8 p-8">
-      <div className="w-64 shrink-0">
-        <h2 className="mb-4 text-xl font-bold">Categories</h2>
-        <CategoryList
-          categories={categories}
-          selectedCategory={selectedCategory}
-          onSelectCategory={setSelectedCategory}
-          onUpdateCategory={handleUpdateCategory}
-          onDeleteCategory={handleDeleteCategory}
-          onAddCategory={handleAddCategory}
-        />
-      </div>
-      <div className="flex-1">
-        <h1 className="mb-6 text-2xl font-bold">
-          {selectedCategory
-            ? categories.find((c: Category) => c.id === selectedCategory)?.name ||
-              'Selected Category'
-            : 'Inbox'}
-        </h1>
-        <TodoList
-          key={selectedCategory} // Force re-render when category changes
-          categories={categories}
-          selectedCategory={selectedCategory}
-        />
-      </div>
-    </main>
+    <div className="flex min-h-screen flex-col bg-gray-50">
+      {/* Header */}
+      <header className="w-full border-b border-gray-200 bg-white shadow-sm">
+        <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
+          <div className="flex items-center gap-3">
+            <img src="cockpit.png" alt="ToDo Cockpit" className="w-14 rounded-full" />
+            <h1 className="text-xl font-bold tracking-tight text-gray-900">ToDo Cockpit</h1>
+          </div>
+
+          <div className="text-sm text-gray-500">
+            {loadingCategories ? 'Loading...' : `${categories.length}/5 categories`}
+          </div>
+        </div>
+      </header>
+
+      {/* Main content */}
+      <main className="flex-grow">
+        <div className="mx-auto max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
+          <div className="flex flex-col gap-8 lg:flex-row">
+            {/* Sidebar */}
+            <div className="w-full lg:w-72">
+              <h2 className="mb-4 text-lg font-semibold text-gray-900">Categories</h2>
+              <CategoryList
+                categories={categories}
+                selectedCategory={selectedCategory}
+                onSelectCategory={setSelectedCategory}
+                onUpdateCategory={handleUpdateCategory}
+                onDeleteCategory={handleDeleteCategory}
+                onAddCategory={handleAddCategory}
+              />
+            </div>
+
+            {/* Main content area */}
+            <div className="flex-1">
+              <div className="mb-6">
+                <h1 className="text-2xl font-bold text-gray-900">
+                  {selectedCategory ? selectedCategoryName : 'Inbox'}
+                </h1>
+                <p className="mt-1 text-sm text-gray-500">
+                  {selectedCategory ? 'Tasks in this category' : 'Uncategorized tasks'}
+                </p>
+              </div>
+
+              <TodoList
+                key={selectedCategory}
+                categories={categories}
+                selectedCategory={selectedCategory}
+              />
+            </div>
+          </div>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <footer className="mt-auto w-full border-t border-gray-200 bg-white py-4">
+        <div className="mx-auto max-w-7xl px-4 text-center text-sm text-gray-500 sm:px-6 lg:px-8">
+          ToDo Cockpit &copy; {new Date().getFullYear()} • Your productivity companion
+        </div>
+      </footer>
+    </div>
   )
 }
