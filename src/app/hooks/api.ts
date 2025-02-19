@@ -1,11 +1,12 @@
 import { Todo } from '@/types/todo'
+import { Category } from '@/types/category'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export function useTodos(categoryId?: string | null) {
   return useQuery({
     queryKey: ['todos', categoryId],
     queryFn: () => {
-      // If categoryId is null, we want ALL todos, so don't send a category param
+      // If categoryId is null, we want ALL todos
       if (categoryId === null) {
         return fetch('/api/todos/all').then(res => res.json())
       }
@@ -71,7 +72,22 @@ export function useCategoryMutations() {
     },
   })
 
-  return { addCategory, updateCategory, deleteCategory }
+  const reorderCategories = useMutation({
+    mutationFn: async (categories: Category[]) => {
+      const response = await fetch('/api/categories/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ categories }),
+      })
+      if (!response.ok) throw new Error('Failed to reorder categories')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['categories'] })
+    },
+  })
+
+  return { addCategory, updateCategory, deleteCategory, reorderCategories }
 }
 
 export function useTodoMutations() {

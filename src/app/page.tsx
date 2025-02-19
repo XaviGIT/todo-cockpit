@@ -14,7 +14,7 @@ export default function Home() {
     undefined
   )
 
-  const { addCategory, updateCategory, deleteCategory } = useCategoryMutations()
+  const { addCategory, updateCategory, deleteCategory, reorderCategories } = useCategoryMutations()
 
   const handleAddCategory = (name: string) => {
     addCategory.mutate(name)
@@ -30,6 +30,10 @@ export default function Home() {
     if (selectedCategory === id) {
       setSelectedCategory(undefined)
     }
+  }
+
+  const handleReorderCategories = (reorderedCategories: Category[]) => {
+    reorderCategories.mutate(reorderedCategories)
   }
 
   // Get the selected category name
@@ -59,7 +63,12 @@ export default function Home() {
           <div className="flex flex-col gap-8 lg:flex-row">
             {/* Sidebar */}
             <div className="w-full lg:w-72">
-              <h2 className="mb-4 text-lg font-semibold text-gray-900">Categories</h2>
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold text-gray-900">Categories</h2>
+                <div className="text-xs text-gray-500">
+                  {categories.length > 1 ? 'Drag to reorder' : ''}
+                </div>
+              </div>
               <CategoryList
                 categories={categories}
                 selectedCategory={selectedCategory}
@@ -67,6 +76,7 @@ export default function Home() {
                 onUpdateCategory={handleUpdateCategory}
                 onDeleteCategory={handleDeleteCategory}
                 onAddCategory={handleAddCategory}
+                onReorderCategories={handleReorderCategories}
               />
             </div>
 

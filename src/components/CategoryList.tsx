@@ -1,7 +1,7 @@
 'use client'
 
 import { Category } from '@/types/category'
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 
 interface Props {
   categories: Category[]
@@ -10,6 +10,7 @@ interface Props {
   onUpdateCategory: (id: string, name: string) => void
   onDeleteCategory: (id: string) => void
   onAddCategory: (name: string) => void
+  onReorderCategories: (categories: Category[]) => void
 }
 
 export default function CategoryList({
@@ -19,18 +20,26 @@ export default function CategoryList({
   onUpdateCategory,
   onDeleteCategory,
   onAddCategory,
+  onReorderCategories,
 }: Props) {
   const [editingId, setEditingId] = useState<string>()
   const [newCategory, setNewCategory] = useState('')
   const [editingName, setEditingName] = useState<Record<string, string>>({})
+  const [draggedItem, setDraggedItem] = useState<Category | null>(null)
+  const [localCategories, setLocalCategories] = useState<Category[]>([])
 
-  // Initialize editing names when categories change
+  // References for drag and drop
+  const dragNodeRef = useRef<HTMLDivElement | null>(null)
+  const dragOverItemRef = useRef<string | null>(null)
+
+  // Initialize editing names and local categories when categories change
   useEffect(() => {
     const names: Record<string, string> = {}
     categories.forEach(cat => {
       names[cat.id] = cat.name
     })
     setEditingName(names)
+    setLocalCategories(categories)
   }, [categories])
 
   const handleAddCategory = () => {
@@ -40,7 +49,6 @@ export default function CategoryList({
   }
 
   const handleCategorySelect = (id?: string) => {
-    console.log('Selecting category:', id)
     onSelectCategory(id)
   }
 
@@ -51,6 +59,84 @@ export default function CategoryList({
   const handleSaveCategory = (id: string) => {
     onUpdateCategory(id, editingName[id])
     setEditingId(undefined)
+  }
+
+  // Drag handlers
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, category: Category) => {
+    dragNodeRef.current = e.currentTarget
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', category.id)
+
+    // Add a slight delay to make the drag visual effect work better
+    setTimeout(() => {
+      if (dragNodeRef.current) {
+        dragNodeRef.current.classList.add('category-dragging')
+      }
+      setDraggedItem(category)
+    }, 0)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, categoryId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    dragOverItemRef.current = categoryId
+
+    // Highlight drop target
+    const dropTarget = e.currentTarget
+    dropTarget.classList.add('category-drag-over')
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove('category-drag-over')
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.currentTarget.classList.remove('category-drag-over')
+
+    if (!draggedItem || !dragOverItemRef.current) return
+
+    const draggedId = draggedItem.id
+    const dropId = dragOverItemRef.current
+
+    if (draggedId === dropId) return
+
+    // Reorder categories
+    const reordered = [...localCategories]
+    const dragIndex = reordered.findIndex(item => item.id === draggedId)
+    const dropIndex = reordered.findIndex(item => item.id === dropId)
+
+    if (dragIndex < 0 || dropIndex < 0) return
+
+    // Remove dragged item
+    const [removed] = reordered.splice(dragIndex, 1)
+    // Insert at new position
+    reordered.splice(dropIndex, 0, removed)
+
+    // Update positions
+    const updatedCategories = reordered.map((cat, index) => ({
+      ...cat,
+      position: index,
+    }))
+
+    setLocalCategories(updatedCategories)
+    onReorderCategories(updatedCategories)
+
+    // Reset drag state
+    setDraggedItem(null)
+    dragOverItemRef.current = null
+    if (dragNodeRef.current) {
+      dragNodeRef.current.classList.remove('category-dragging')
+    }
+  }
+
+  const handleDragEnd = () => {
+    // Clean up any CSS classes or refs
+    if (dragNodeRef.current) {
+      dragNodeRef.current.classList.remove('category-dragging')
+    }
+    setDraggedItem(null)
+    dragOverItemRef.current = null
   }
 
   return (
@@ -82,8 +168,18 @@ export default function CategoryList({
           <span className="font-medium">Inbox</span>
         </div>
 
-        {categories.map(category => (
-          <div key={category.id} className="group relative">
+        {/* Display categories with drag and drop */}
+        {localCategories.map(category => (
+          <div
+            key={category.id}
+            className="group relative transition-all category-item"
+            draggable={editingId !== category.id}
+            onDragStart={e => handleDragStart(e, category)}
+            onDragOver={e => handleDragOver(e, category.id)}
+            onDragLeave={handleDragLeave}
+            onDrop={handleDrop}
+            onDragEnd={handleDragEnd}
+          >
             {editingId === category.id ? (
               <div className="relative rounded-lg border border-blue-200 bg-white shadow-sm">
                 <input
@@ -148,7 +244,31 @@ export default function CategoryList({
                     : 'text-gray-700 hover:bg-gray-50'
                 }`}
               >
-                <span className="block w-full truncate pr-16 font-medium">{category.name}</span>
+                <div className="flex items-center">
+                  {/* Drag handle */}
+                  <span
+                    className="mr-2 opacity-0 group-hover:opacity-100 drag-handle"
+                    title="Drag to reorder"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="14"
+                      height="14"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      strokeWidth="2"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
+                      <circle cx="8" cy="8" r="1"></circle>
+                      <circle cx="8" cy="16" r="1"></circle>
+                      <circle cx="16" cy="8" r="1"></circle>
+                      <circle cx="16" cy="16" r="1"></circle>
+                    </svg>
+                  </span>
+                  <span className="block w-full truncate pr-16 font-medium">{category.name}</span>
+                </div>
 
                 <div className="absolute right-3 top-1/2 flex -translate-y-1/2 items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                   <button

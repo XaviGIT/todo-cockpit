@@ -11,13 +11,7 @@ interface Props {
 
 export function LabelPicker({ selectedLabels, onChange }: Props) {
   // Store labels in localStorage to persist custom labels
-  const [labels, setLabels] = useLocalStorage<Label[]>('todo_labels', [
-    { id: '1', name: 'Work', color: '#ef4444' },
-    { id: '2', name: 'Personal', color: '#3b82f6' },
-    { id: '3', name: 'Urgent', color: '#f97316' },
-    { id: '4', name: 'Low Priority', color: '#10b981' },
-    { id: '5', name: 'Waiting', color: '#8b5cf6' },
-  ])
+  const [labels, setLabels] = useLocalStorage<Label[]>('todo_labels', [])
 
   const [showLabelForm, setShowLabelForm] = useState(false)
   const [newLabelName, setNewLabelName] = useState('')

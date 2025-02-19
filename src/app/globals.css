@@ -28,3 +28,30 @@ body {
     color: rgb(107 114 128 / var(--tw-text-opacity, 1)); /* text-gray-500 */
   }
 }
+
+.category-dragging {
+  cursor: grabbing;
+  opacity: 0.6;
+  transform: scale(1.02);
+  z-index: 10;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+}
+
+.category-drag-over {
+  border-color: #93c5fd;
+  background-color: #eff6ff;
+  transition: all 0.2s ease;
+}
+
+.category-item {
+  transition: background-color 0.2s ease, transform 0.15s ease, opacity 0.15s ease;
+}
+
+.drag-handle {
+  cursor: grab;
+  touch-action: none;
+}
+
+.drag-handle:active {
+  cursor: grabbing;
+}
