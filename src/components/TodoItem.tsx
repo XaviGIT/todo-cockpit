@@ -1,4 +1,4 @@
-import { format } from 'date-fns'
+import { format, isToday, isTomorrow, isPast, addDays } from 'date-fns'
 import { useState, useEffect } from 'react'
 import { Label } from '@/types/label'
 import { Todo } from '@/types/todo'
@@ -65,9 +65,37 @@ export function TodoItem({
     ? categories.find(c => c.id === todo.categoryId)?.name
     : undefined
 
+  // Format due date with special handling for today/tomorrow and overdue
+  const formatDueDate = (date: Date) => {
+    if (isToday(date)) {
+      return 'Today'
+    } else if (isTomorrow(date)) {
+      return 'Tomorrow'
+    } else if (isPast(date)) {
+      return `Overdue: ${format(date, 'MMM d')}`
+    } else if (isPast(addDays(new Date(), 7)) && !isPast(date)) {
+      // Within the next week
+      return format(date, 'EEEE') // Day name
+    } else {
+      return format(date, 'MMM d, yyyy')
+    }
+  }
+
+  // Determine due date color
+  const getDueDateColor = (date: Date) => {
+    if (isPast(date) && todo.status !== 'DONE') {
+      return 'text-red-600 font-medium'
+    } else if (isToday(date)) {
+      return 'text-amber-600 font-medium'
+    } else if (isTomorrow(date)) {
+      return 'text-amber-500'
+    }
+    return 'text-gray-500'
+  }
+
   return (
     <div
-      className={`group rounded-xl border border-gray-200 bg-white p-4 transition-all ${
+      className={`group rounded-xl border ${todo.isImportant ? 'border-amber-200 bg-amber-50' : 'border-gray-200 bg-white'} p-4 transition-all ${
         isEditing ? 'shadow-md' : 'hover:border-gray-300 hover:shadow-sm'
       }`}
       onMouseEnter={() => setIsHovering(true)}
@@ -80,7 +108,7 @@ export function TodoItem({
             type="checkbox"
             checked={todo.status === 'DONE'}
             onChange={e => onUpdate(todo.id, { status: e.target.checked ? 'DONE' : 'TODO' })}
-            className="h-5 w-5 rounded-md border-gray-300 text-blue-600 focus:ring-blue-500"
+            className={`h-5 w-5 rounded-md border-gray-300 ${todo.isImportant ? 'text-amber-600 focus:ring-amber-500' : 'text-blue-600 focus:ring-blue-500'}`}
           />
         </div>
 
@@ -101,12 +129,28 @@ export function TodoItem({
                 />
               ) : (
                 <div className="flex items-center gap-2">
+                  {todo.isImportant && !isEditing && (
+                    <span className="text-amber-500 mr-1">
+                      <svg
+                        xmlns="http://www.w3.org/2000/svg"
+                        width="18"
+                        height="18"
+                        viewBox="0 0 24 24"
+                        fill="currentColor"
+                        stroke="currentColor"
+                        strokeWidth="1"
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                      >
+                        <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+                      </svg>
+                    </span>
+                  )}
                   <span
-                    className={`text-base ${todo.status === 'DONE' ? 'text-gray-500 line-through' : 'text-gray-900'}`}
+                    className={`text-base ${todo.status === 'DONE' ? 'text-gray-500 line-through' : 'text-gray-900 font-medium'}`}
                   >
                     {todo.title}
                   </span>
-                  {todo.isImportant && <span className="text-lg text-red-500">★</span>}
                 </div>
               )}
             </div>
@@ -121,8 +165,8 @@ export function TodoItem({
                     onClick={() => onUpdate(todo.id, { isImportant: !todo.isImportant })}
                     className={`rounded p-1.5 transition-colors ${
                       todo.isImportant
-                        ? 'text-red-500 hover:bg-red-50'
-                        : 'text-gray-400 hover:bg-gray-100 hover:text-yellow-500'
+                        ? 'text-amber-500 hover:bg-amber-100'
+                        : 'text-gray-400 hover:bg-gray-100 hover:text-amber-500'
                     }`}
                     title={todo.isImportant ? 'Remove importance' : 'Mark as important'}
                   >
@@ -208,7 +252,9 @@ export function TodoItem({
               )}
 
               {todo.dueDate && (
-                <div className="flex items-center gap-1 text-gray-500">
+                <div
+                  className={`flex items-center gap-1 ${getDueDateColor(new Date(todo.dueDate))}`}
+                >
                   <svg
                     xmlns="http://www.w3.org/2000/svg"
                     width="14"
@@ -219,13 +265,16 @@ export function TodoItem({
                     strokeWidth="2"
                     strokeLinecap="round"
                     strokeLinejoin="round"
+                    className={
+                      isPast(new Date(todo.dueDate)) && todo.status !== 'DONE' ? 'text-red-600' : ''
+                    }
                   >
                     <rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect>
                     <line x1="16" y1="2" x2="16" y2="6"></line>
                     <line x1="8" y1="2" x2="8" y2="6"></line>
                     <line x1="3" y1="10" x2="21" y2="10"></line>
                   </svg>
-                  <span>{format(new Date(todo.dueDate), 'MMM d, yyyy')}</span>
+                  <span>{formatDueDate(new Date(todo.dueDate))}</span>
                 </div>
               )}
 
@@ -270,7 +319,18 @@ export function TodoItem({
               </div>
 
               <div className="flex flex-col gap-1">
-                <label className="text-sm font-medium text-gray-700">Labels</label>
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-gray-700">Labels</label>
+                  <label className="flex items-center space-x-2 text-sm text-gray-700">
+                    <input
+                      type="checkbox"
+                      checked={todo.isImportant}
+                      onChange={e => onUpdate(todo.id, { isImportant: e.target.checked })}
+                      className="h-4 w-4 rounded border-gray-300 text-amber-600 focus:ring-amber-500"
+                    />
+                    <span>Mark as important</span>
+                  </label>
+                </div>
                 <LabelPicker
                   selectedLabels={editLabels}
                   onChange={labels => setEditLabels(labels)}

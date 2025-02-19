@@ -8,12 +8,19 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
     try {
       const item = window.localStorage.getItem(key)
       if (item) {
-        setStoredValue(JSON.parse(item))
+        try {
+          setStoredValue(JSON.parse(item))
+        } catch (parseError) {
+          console.error('Error parsing stored value:', parseError)
+          // If parsing fails, use the initial value
+          setStoredValue(initialValue)
+        }
       }
     } catch (error) {
-      console.error(error)
+      console.error('Error accessing localStorage:', error)
+      setStoredValue(initialValue)
     }
-  }, [key])
+  }, [key, initialValue])
 
   const setValue = (value: T | ((val: T) => T)) => {
     try {
@@ -21,7 +28,7 @@ export function useLocalStorage<T>(key: string, initialValue: T) {
       setStoredValue(valueToStore)
       window.localStorage.setItem(key, JSON.stringify(valueToStore))
     } catch (error) {
-      console.error(error)
+      console.error('Error setting localStorage value:', error)
     }
   }
 

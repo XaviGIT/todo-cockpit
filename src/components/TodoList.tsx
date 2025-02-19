@@ -22,7 +22,8 @@ export default function TodoList({ categories, selectedCategory }: Props) {
   const [newTodoCategory, setNewTodoCategory] = useState<string | undefined>(selectedCategory)
   const [dueDate, setDueDate] = useState<Date | null>(null)
   const [newTodoLabels, setNewTodoLabels] = useState<string[]>([])
-  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ALL')
+  // Set 'ACTIVE' as the default filter
+  const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ACTIVE')
   const [showAddForm, setShowAddForm] = useState(false)
   const [labels] = useState<Label[]>([
     { id: '1', name: 'Work', color: '#ef4444' },
@@ -71,7 +72,7 @@ export default function TodoList({ categories, selectedCategory }: Props) {
     return true
   })
 
-  // Organize todos - important first, then by status
+  // Organize todos - important first, then by due date, then by status
   const sortedTodos = [...filteredTodos].sort((a, b) => {
     // First sort by status (active before completed)
     if (a.status !== b.status) {
@@ -276,7 +277,13 @@ export default function TodoList({ categories, selectedCategory }: Props) {
             <line x1="15" y1="9" x2="9" y2="15"></line>
           </svg>
           <p className="text-gray-500">
-            {selectedCategory ? 'No tasks in this category yet' : 'Your inbox is empty'}
+            {filter === 'ACTIVE'
+              ? 'No active tasks'
+              : filter === 'COMPLETED'
+                ? 'No completed tasks'
+                : selectedCategory
+                  ? 'No tasks in this category yet'
+                  : 'Your inbox is empty'}
           </p>
           <button
             onClick={() => setShowAddForm(true)}

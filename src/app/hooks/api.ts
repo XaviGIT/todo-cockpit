@@ -1,10 +1,15 @@
 import { Todo } from '@/types/todo'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
-export function useTodos(categoryId?: string) {
+export function useTodos(categoryId?: string | null) {
   return useQuery({
     queryKey: ['todos', categoryId],
     queryFn: () => {
+      // If categoryId is null, we want ALL todos, so don't send a category param
+      if (categoryId === null) {
+        return fetch('/api/todos/all').then(res => res.json())
+      }
+
       // When categoryId is undefined (Inbox view), explicitly pass empty string
       const queryParam = categoryId === undefined ? '' : categoryId
       return fetch(`/api/todos?categoryId=${queryParam}`).then(res => res.json())
@@ -62,6 +67,7 @@ export function useCategoryMutations() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['categories'] })
+      queryClient.invalidateQueries({ queryKey: ['todos'] })
     },
   })
 

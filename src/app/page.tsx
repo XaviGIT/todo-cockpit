@@ -1,14 +1,19 @@
 'use client'
 
-import { useState } from 'react'
 import TodoList from '@/components/TodoList'
 import CategoryList from '@/components/CategoryList'
+import TodoStatistics from '@/components/TodoStatistics'
 import { useCategories, useCategoryMutations } from '@/app/hooks/api'
 import { Category } from '@/types/category'
+import { useLocalStorage } from '@/app/hooks/useLocalStorage'
 
 export default function Home() {
   const { data: categories = [], isLoading: loadingCategories } = useCategories()
-  const [selectedCategory, setSelectedCategory] = useState<string>()
+  const [selectedCategory, setSelectedCategory] = useLocalStorage<string | undefined>(
+    'selectedCategory',
+    undefined
+  )
+
   const { addCategory, updateCategory, deleteCategory } = useCategoryMutations()
 
   const handleAddCategory = (name: string) => {
@@ -21,6 +26,10 @@ export default function Home() {
 
   const handleDeleteCategory = (id: string) => {
     deleteCategory.mutate(id)
+    // If the deleted category was selected, return to inbox
+    if (selectedCategory === id) {
+      setSelectedCategory(undefined)
+    }
   }
 
   // Get the selected category name
@@ -71,6 +80,9 @@ export default function Home() {
                   {selectedCategory ? 'Tasks in this category' : 'Uncategorized tasks'}
                 </p>
               </div>
+
+              {/* Statistics Dashboard */}
+              <TodoStatistics selectedCategory={selectedCategory} />
 
               <TodoList
                 key={selectedCategory}
