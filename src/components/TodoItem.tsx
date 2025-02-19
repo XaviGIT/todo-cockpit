@@ -1,5 +1,5 @@
 import { format } from 'date-fns'
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Label } from '@/types/label'
 import { Todo } from '@/types/todo'
 import { Category } from '@/types/category'
@@ -10,7 +10,9 @@ import { DatePicker } from './DatePicker'
 interface Props {
   todo: Todo
   labels: Label[]
+  categories: Category[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
+  onDelete: (id: string) => void
 }
 
 export function TodoItem({
@@ -21,9 +23,36 @@ export function TodoItem({
 }: Props & { categories: Category[] }) {
   const [isEditing, setIsEditing] = useState(false)
   const [editTitle, setEditTitle] = useState(todo.title)
+  const [editCategoryId, setEditCategoryId] = useState<string | undefined>(todo.categoryId)
+  const [editDueDate, setEditDueDate] = useState<Date | null>(
+    todo.dueDate ? new Date(todo.dueDate) : null
+  )
+  const [editLabels, setEditLabels] = useState<string[]>(todo.labels || [])
+
+  // Reset edit state when todo changes or when exiting edit mode
+  useEffect(() => {
+    setEditTitle(todo.title)
+    setEditCategoryId(todo.categoryId)
+    setEditDueDate(todo.dueDate ? new Date(todo.dueDate) : null)
+    setEditLabels(todo.labels || [])
+  }, [todo, isEditing])
 
   const handleSave = () => {
-    onUpdate(todo.id, { title: editTitle })
+    onUpdate(todo.id, {
+      title: editTitle,
+      categoryId: editCategoryId,
+      dueDate: editDueDate ?? undefined,
+      labels: editLabels,
+    })
+    setIsEditing(false)
+  }
+
+  const handleCancel = () => {
+    // Reset form values to original todo values
+    setEditTitle(todo.title)
+    setEditCategoryId(todo.categoryId)
+    setEditDueDate(todo.dueDate ? new Date(todo.dueDate) : null)
+    setEditLabels(todo.labels || [])
     setIsEditing(false)
   }
 
@@ -41,7 +70,10 @@ export function TodoItem({
               autoFocus
               value={editTitle}
               onChange={e => setEditTitle(e.target.value)}
-              onKeyDown={e => e.key === 'Enter' && handleSave()}
+              onKeyDown={e => {
+                if (e.key === 'Enter') handleSave()
+                if (e.key === 'Escape') handleCancel()
+              }}
               className="flex-1 rounded-lg border p-2 text-gray-900 placeholder:text-gray-500"
             />
           ) : (
@@ -55,30 +87,44 @@ export function TodoItem({
           >
             ★
           </button>
-          <button
-            onClick={() => setIsEditing(!isEditing)}
-            className="ml-auto text-gray-400 hover:text-gray-600"
-          >
-            {isEditing ? 'Save' : 'Edit'}
-          </button>
+          {isEditing ? (
+            <div className="ml-auto flex gap-2">
+              <button
+                onClick={handleCancel}
+                className="rounded px-2 py-1 text-gray-600 hover:bg-gray-100"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleSave}
+                className="rounded bg-blue-500 px-2 py-1 text-white hover:bg-blue-600"
+              >
+                Save
+              </button>
+            </div>
+          ) : (
+            <button
+              onClick={() => setIsEditing(true)}
+              className="ml-auto text-gray-400 hover:text-gray-600"
+            >
+              Edit
+            </button>
+          )}
         </div>
 
         {isEditing ? (
           <div className="space-y-2">
             <CategorySelect
-              value={todo.categoryId}
-              onChange={categoryId => onUpdate(todo.id, { categoryId })}
+              value={editCategoryId}
+              onChange={categoryId => setEditCategoryId(categoryId)}
               categories={categories}
             />
             <DatePicker
-              selected={todo.dueDate ? new Date(todo.dueDate) : null}
-              onChange={date => onUpdate(todo.id, { dueDate: date ?? undefined })}
+              selected={editDueDate}
+              onChange={date => setEditDueDate(date)}
               className="rounded-lg border p-2"
             />
-            <LabelPicker
-              selectedLabels={todo.labels}
-              onChange={labels => onUpdate(todo.id, { labels })}
-            />
+            <LabelPicker selectedLabels={editLabels} onChange={labels => setEditLabels(labels)} />
           </div>
         ) : (
           <>

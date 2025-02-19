@@ -1,14 +1,51 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 generator client {
   provider = "prisma-client-js"
 }
 
-datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+model User {
+  id         String     @id @default(cuid())
+  email      String     @unique
+  todos      Todo[]
+  categories Category[]
+  labels     Label[]
+}
+
+model Todo {
+  id          String    @id
+  title       String
+  dueDate     DateTime?
+  isImportant Boolean   @default(false)
+  status      String    @default("INBOX")
+  labels      String[]
+  categoryId  String?
+  category    Category? @relation(fields: [categoryId], references: [id], onDelete: SetNull)
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  User        User?     @relation(fields: [userId], references: [id])
+  userId      String?
+  Label       Label?    @relation(fields: [labelId], references: [id])
+  labelId     String?
+}
+
+model Category {
+  id       String  @id @default(uuid())
+  name     String
+  position Int     @default(0)
+  todos    Todo[]
+  User     User?   @relation(fields: [userId], references: [id])
+  userId   String?
+}
+
+model Label {
+  id     String @id @default(cuid())
+  name   String
+  color  String
+  user   User   @relation(fields: [userId], references: [id])
+  userId String
+  todos  Todo[]
 }
