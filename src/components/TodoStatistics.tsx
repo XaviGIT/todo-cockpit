@@ -3,47 +3,66 @@
 import { useMemo } from 'react'
 import { isPast, isToday, isTomorrow, addDays } from 'date-fns'
 import { useTodos } from '@/app/hooks/api'
+import { useQuery } from '@tanstack/react-query'
+import { Todo } from '@/types/todo'
 
 interface Props {
-  selectedCategory: string | undefined
+  selectedCategory: string | undefined | null
+  showImportantOnly?: boolean
 }
 
-export default function TodoStatistics({ selectedCategory }: Props) {
-  const { data: todos = [] } = useTodos(selectedCategory)
+export default function TodoStatistics({ selectedCategory, showImportantOnly = false }: Props) {
+  // For important view, we need to fetch all todos
+  const { data: allTodos = [] } = useQuery({
+    queryKey: ['todos', 'all'],
+    queryFn: () => fetch('/api/todos/all').then(res => res.json()),
+    enabled: showImportantOnly,
+  })
+
+  // For category view, use the regular hook
+  const { data: categoryTodos = [] } = useTodos(selectedCategory ?? undefined)
+
+  // Use the appropriate data source
+  const todos = showImportantOnly ? allTodos : categoryTodos
 
   const stats = useMemo(() => {
     // Ensure todos is an array
     const validTodos = Array.isArray(todos) ? todos : []
 
+    // Filter todos if we're in important view
+    const filteredTodos = showImportantOnly
+      ? validTodos.filter((todo: Todo) => todo.isImportant)
+      : validTodos
+
     // Count total tasks
-    const total = validTodos.length
+    const total = filteredTodos.length
 
     // Count completed tasks
-    const completed = validTodos.filter(todo => todo.status === 'DONE').length
+    const completed = filteredTodos.filter(todo => todo.status === 'DONE').length
 
     // Count active tasks
     const active = total - completed
 
     // Count important tasks
-    const important = validTodos.filter(todo => todo.isImportant).length
+    const important = filteredTodos.filter(todo => todo.isImportant).length
 
     // Count overdue tasks (only count active tasks)
-    const overdue = validTodos.filter(
+    const overdue = filteredTodos.filter(
       todo => todo.dueDate && isPast(new Date(todo.dueDate)) && todo.status !== 'DONE'
     ).length
 
     // Count tasks due today
-    const dueToday = validTodos.filter(
+    const dueToday = filteredTodos.filter(
       todo => todo.dueDate && isToday(new Date(todo.dueDate)) && todo.status !== 'DONE'
     ).length
 
     // Count tasks due tomorrow
-    const dueTomorrow = validTodos.filter(
+    const dueTomorrow = filteredTodos.filter(
       todo => todo.dueDate && isTomorrow(new Date(todo.dueDate)) && todo.status !== 'DONE'
     ).length
 
     // Count tasks due within a week (but not today/tomorrow/overdue)
-    const dueThisWeek = validTodos.filter(todo => {
+    const dueThisWeek = filteredTodos.filter(todo => {
       if (!todo.dueDate || todo.status === 'DONE') return false
       const dueDate = new Date(todo.dueDate)
       return (
@@ -68,7 +87,7 @@ export default function TodoStatistics({ selectedCategory }: Props) {
       dueThisWeek,
       completionRate,
     }
-  }, [todos])
+  }, [todos, showImportantOnly])
 
   return (
     <div className="grid grid-cols-2 gap-4 md:grid-cols-4 mb-6">
@@ -88,18 +107,32 @@ export default function TodoStatistics({ selectedCategory }: Props) {
         suffix="%"
       />
       <StatCard
-        title="Important"
-        value={stats.important}
-        subtitle={`${Math.round((stats.important / Math.max(stats.total, 1)) * 100)}% of all tasks`}
-        icon={<ImportantIcon />}
-        color="bg-amber-50 text-amber-700"
+        title={showImportantOnly ? 'Categories' : 'Important'}
+        value={
+          showImportantOnly
+            ? // Count unique categories if in important view
+              new Set(
+                (todos as Todo[])
+                  .filter(todo => todo.isImportant)
+                  .map(todo => todo.categoryId || 'inbox')
+              ).size
+            : // Otherwise show important count
+              stats.important
+        }
+        subtitle={
+          showImportantOnly
+            ? 'Spread across categories'
+            : `${Math.round((stats.important / Math.max(stats.total, 1)) * 100)}% of all tasks`
+        }
+        icon={showImportantOnly ? <CategoryIcon /> : <ImportantIcon />}
+        color={showImportantOnly ? 'bg-indigo-50 text-indigo-700' : 'bg-amber-50 text-amber-700'}
       />
       <StatCard
         title="Due Soon"
         value={stats.overdue + stats.dueToday}
         subtitle={stats.overdue > 0 ? `${stats.overdue} overdue` : `${stats.dueTomorrow} tomorrow`}
         icon={<CalendarIcon />}
-        color={stats.overdue > 0 ? 'bg-red-50 text-red-700' : 'bg-indigo-50 text-indigo-700'}
+        color={stats.overdue > 0 ? 'bg-red-50 text-red-700' : 'bg-purple-50 text-purple-700'}
       />
     </div>
   )
@@ -185,6 +218,24 @@ function ImportantIcon() {
       strokeLinejoin="round"
     >
       <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+    </svg>
+  )
+}
+
+function CategoryIcon() {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      width="16"
+      height="16"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path>
     </svg>
   )
 }
