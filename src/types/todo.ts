@@ -6,4 +6,5 @@ export interface Todo {
   status: 'INBOX' | 'TODO' | 'DONE'
   categoryId?: string
   labels: string[]
+  position: number
 }

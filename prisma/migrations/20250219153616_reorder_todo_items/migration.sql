@@ -1,0 +1,3 @@
+-- AlterTable
+ALTER TABLE "Todo" ADD COLUMN     "position" INTEGER NOT NULL DEFAULT 0,
+ALTER COLUMN "labels" SET DEFAULT ARRAY[]::TEXT[];

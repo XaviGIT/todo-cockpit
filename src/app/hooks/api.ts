@@ -133,5 +133,20 @@ export function useTodoMutations() {
     },
   })
 
-  return { addTodo, updateTodo, deleteTodo }
+  const reorderTodos = useMutation<Todo[], unknown, Todo[]>({
+    mutationFn: async todos => {
+      const response = await fetch('/api/todos/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ todos }),
+      })
+      if (!response.ok) throw new Error('Failed to reorder todos')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['todos'] })
+    },
+  })
+
+  return { addTodo, updateTodo, deleteTodo, reorderTodos }
 }

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useRef, useMemo } from 'react'
 import { Todo } from '@/types/todo'
 import { TodoItem } from './TodoItem'
 import { DatePicker } from './DatePicker'
@@ -31,12 +31,12 @@ export default function TodoList({ categories, selectedCategory }: Props) {
     { id: '3', name: 'Urgent', color: '#f97316' },
   ])
 
-  const { addTodo, updateTodo, deleteTodo } = useTodoMutations()
+  // State for drag and drop reordering
+  const draggedTodoRef = useRef<Todo | null>(null)
+  const dragNodeRef = useRef<HTMLDivElement | null>(null)
+  const dragOverItemRef = useRef<string | null>(null)
 
-  // Update newTodoCategory when selectedCategory changes
-  useEffect(() => {
-    setNewTodoCategory(selectedCategory)
-  }, [selectedCategory])
+  const { addTodo, updateTodo, deleteTodo, reorderTodos } = useTodoMutations()
 
   const handleAddTodo = () => {
     if (!newTodoTitle.trim()) return
@@ -48,6 +48,7 @@ export default function TodoList({ categories, selectedCategory }: Props) {
       status: 'INBOX',
       labels: newTodoLabels,
       categoryId: newTodoCategory,
+      position: 0, // New todos go at the top
     })
 
     setNewTodoTitle('')
@@ -64,37 +65,148 @@ export default function TodoList({ categories, selectedCategory }: Props) {
     deleteTodo.mutate(id)
   }
 
-  // Filter todos based on the current filter
-  const filteredTodos = todos.filter((todo: Todo) => {
-    if (filter === 'ALL') return true
-    if (filter === 'ACTIVE') return todo.status !== 'DONE'
-    if (filter === 'COMPLETED') return todo.status === 'DONE'
-    return true
-  })
+  // Filter and sort todos
+  const filteredAndSortedTodos = useMemo(() => {
+    // Filter todos based on the current filter
+    const filtered = todos.filter((todo: Todo) => {
+      if (filter === 'ALL') return true
+      if (filter === 'ACTIVE') return todo.status !== 'DONE'
+      if (filter === 'COMPLETED') return todo.status === 'DONE'
+      return true
+    })
 
-  // Organize todos - important first, then by due date, then by status
-  const sortedTodos = [...filteredTodos].sort((a, b) => {
-    // First sort by status (active before completed)
-    if (a.status !== b.status) {
-      return a.status === 'DONE' ? 1 : -1
+    // Organize todos - important first, then by status, then by position
+    return [...filtered].sort((a, b) => {
+      // First sort by status (active before completed)
+      if (a.status !== b.status) {
+        return a.status === 'DONE' ? 1 : -1
+      }
+
+      // Then by importance
+      if (a.isImportant !== b.isImportant) {
+        return a.isImportant ? -1 : 1
+      }
+
+      // Then by custom order (if exists)
+      if (a.position !== undefined && b.position !== undefined) {
+        return a.position - b.position
+      }
+
+      // Then by due date (if exists)
+      if (a.dueDate && b.dueDate) {
+        return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+      }
+
+      // Items with due dates come before those without
+      if (a.dueDate && !b.dueDate) return -1
+      if (!a.dueDate && b.dueDate) return 1
+
+      return 0
+    })
+  }, [todos, filter])
+
+  // Drag and drop handlers
+  const handleDragStart = (e: React.DragEvent<HTMLDivElement>, todo: Todo) => {
+    dragNodeRef.current = e.currentTarget
+    e.dataTransfer.effectAllowed = 'move'
+    e.dataTransfer.setData('text/plain', todo.id)
+
+    // Add a slight delay for better visual effect
+    setTimeout(() => {
+      if (dragNodeRef.current) {
+        dragNodeRef.current.classList.add('todo-dragging')
+      }
+      draggedTodoRef.current = todo
+    }, 0)
+  }
+
+  const handleDragOver = (e: React.DragEvent<HTMLDivElement>, todoId: string) => {
+    e.preventDefault()
+    e.dataTransfer.dropEffect = 'move'
+    dragOverItemRef.current = todoId
+
+    // Add visual feedback
+    const dropTarget = e.currentTarget
+    dropTarget.classList.add('todo-drag-over')
+  }
+
+  const handleDragLeave = (e: React.DragEvent<HTMLDivElement>) => {
+    e.currentTarget.classList.remove('todo-drag-over')
+  }
+
+  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+    e.preventDefault()
+    e.currentTarget.classList.remove('todo-drag-over')
+
+    if (!draggedTodoRef.current || !dragOverItemRef.current) return
+
+    const draggedId = draggedTodoRef.current.id
+    const dropId = dragOverItemRef.current
+
+    if (draggedId === dropId) return
+
+    // Only allow reordering within same status and category
+    const draggedTodoItem = todos.find((t: Todo) => t.id === draggedId)
+    const dropTodoItem = todos.find((t: Todo) => t.id === dropId)
+
+    if (!draggedTodoItem || !dropTodoItem) return
+
+    // Don't reorder across different statuses or categories
+    if (
+      draggedTodoItem.status !== dropTodoItem.status ||
+      draggedTodoItem.categoryId !== dropTodoItem.categoryId
+    ) {
+      return
     }
 
-    // Then by importance
-    if (a.isImportant !== b.isImportant) {
-      return a.isImportant ? -1 : 1
+    // Find all todos in the same category and status
+    const sameCategoryAndStatus = todos.filter(
+      (t: Todo) =>
+        t.categoryId === draggedTodoItem.categoryId && t.status === draggedTodoItem.status
+    )
+
+    // Create a copy for reordering
+    const reorderedGroup = [...sameCategoryAndStatus]
+
+    // Find indices
+    const dragIndex = reorderedGroup.findIndex((t: Todo) => t.id === draggedId)
+    const dropIndex = reorderedGroup.findIndex((t: Todo) => t.id === dropId)
+
+    if (dragIndex < 0 || dropIndex < 0) return
+
+    // Reorder the array (move dragged item to new position)
+    const [removed] = reorderedGroup.splice(dragIndex, 1)
+    reorderedGroup.splice(dropIndex, 0, removed)
+
+    // Update positions
+    const todosToUpdate = reorderedGroup.map((todo, index) => ({
+      ...todo,
+      position: index,
+    }))
+
+    // Send update to server
+    reorderTodos.mutate(todosToUpdate)
+
+    // Reset drag state
+    draggedTodoRef.current = null
+    dragOverItemRef.current = null
+    if (dragNodeRef.current) {
+      dragNodeRef.current.classList.remove('todo-dragging')
     }
+  }
 
-    // Then by due date (if exists)
-    if (a.dueDate && b.dueDate) {
-      return new Date(a.dueDate).getTime() - new Date(b.dueDate).getTime()
+  const handleDragEnd = () => {
+    if (dragNodeRef.current) {
+      dragNodeRef.current.classList.remove('todo-dragging')
     }
+    draggedTodoRef.current = null
+    dragOverItemRef.current = null
+  }
 
-    // Items with due dates come before those without
-    if (a.dueDate && !b.dueDate) return -1
-    if (!a.dueDate && b.dueDate) return 1
-
-    return 0
-  })
+  // Update category when it changes
+  if (newTodoCategory !== selectedCategory) {
+    setNewTodoCategory(selectedCategory)
+  }
 
   if (isLoading) {
     return (
@@ -252,13 +364,40 @@ export default function TodoList({ categories, selectedCategory }: Props) {
           </button>
         </div>
 
-        <div className="text-sm text-gray-500">
-          {filteredTodos.length} {filteredTodos.length === 1 ? 'task' : 'tasks'}
+        <div className="flex items-center gap-2">
+          <div className="text-sm text-gray-500">
+            {filteredAndSortedTodos.length} {filteredAndSortedTodos.length === 1 ? 'task' : 'tasks'}
+          </div>
+
+          {/* Only show reordering hint when there are multiple active todos */}
+          {filteredAndSortedTodos.filter(todo => todo.status !== 'DONE').length > 1 && (
+            <div className="text-xs text-gray-500 hidden sm:block">
+              <span className="flex items-center">
+                <svg
+                  xmlns="http://www.w3.org/2000/svg"
+                  width="14"
+                  height="14"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="2"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  className="mr-1"
+                >
+                  <line x1="3" y1="12" x2="21" y2="12"></line>
+                  <line x1="3" y1="6" x2="21" y2="6"></line>
+                  <line x1="3" y1="18" x2="21" y2="18"></line>
+                </svg>
+                Drag to reorder
+              </span>
+            </div>
+          )}
         </div>
       </div>
 
       {/* Task List */}
-      {sortedTodos.length === 0 ? (
+      {filteredAndSortedTodos.length === 0 ? (
         <div className="flex h-40 flex-col items-center justify-center rounded-xl border border-dashed border-gray-300 bg-gray-50 p-6 text-center">
           <svg
             xmlns="http://www.w3.org/2000/svg"
@@ -294,15 +433,25 @@ export default function TodoList({ categories, selectedCategory }: Props) {
         </div>
       ) : (
         <div className="space-y-3">
-          {sortedTodos.map(todo => (
-            <TodoItem
+          {filteredAndSortedTodos.map(todo => (
+            <div
               key={todo.id}
-              todo={todo}
-              labels={labels}
-              categories={categories}
-              onUpdate={handleUpdateTodo}
-              onDelete={handleDeleteTodo}
-            />
+              className={`todo-item relative ${todo.status === 'DONE' ? '' : 'draggable-todo'}`}
+              draggable={todo.status !== 'DONE'}
+              onDragStart={todo.status !== 'DONE' ? e => handleDragStart(e, todo) : undefined}
+              onDragOver={e => handleDragOver(e, todo.id)}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onDragEnd={handleDragEnd}
+            >
+              <TodoItem
+                todo={todo}
+                labels={labels}
+                categories={categories}
+                onUpdate={handleUpdateTodo}
+                onDelete={handleDeleteTodo}
+              />
+            </div>
           ))}
         </div>
       )}
