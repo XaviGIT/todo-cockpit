@@ -4,7 +4,6 @@ import { useState, useRef, useMemo } from 'react'
 import { Todo } from '@/types/todo'
 import { TodoItem } from './TodoItem'
 import { DatePicker } from './DatePicker'
-import { Label } from '@/types/label'
 import { LabelPicker } from './LabelPicker'
 import { CategorySelect } from './CategorySelect'
 import { Category } from '@/types/category'
@@ -25,11 +24,6 @@ export default function TodoList({ categories, selectedCategory }: Props) {
   // Set 'ACTIVE' as the default filter
   const [filter, setFilter] = useState<'ALL' | 'ACTIVE' | 'COMPLETED'>('ACTIVE')
   const [showAddForm, setShowAddForm] = useState(false)
-  const [labels] = useState<Label[]>([
-    { id: '1', name: 'Work', color: '#ef4444' },
-    { id: '2', name: 'Personal', color: '#3b82f6' },
-    { id: '3', name: 'Urgent', color: '#f97316' },
-  ])
 
   // State for drag and drop reordering
   const draggedTodoRef = useRef<Todo | null>(null)
@@ -446,7 +440,6 @@ export default function TodoList({ categories, selectedCategory }: Props) {
             >
               <TodoItem
                 todo={todo}
-                labels={labels}
                 categories={categories}
                 onUpdate={handleUpdateTodo}
                 onDelete={handleDeleteTodo}

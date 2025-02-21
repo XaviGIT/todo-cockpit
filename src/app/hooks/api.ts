@@ -1,6 +1,7 @@
 import { Todo } from '@/types/todo'
 import { Category } from '@/types/category'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import { Label } from '@/types/label'
 
 export function useTodos(categoryId?: string | null) {
   return useQuery({
@@ -149,4 +150,62 @@ export function useTodoMutations() {
   })
 
   return { addTodo, updateTodo, deleteTodo, reorderTodos }
+}
+
+// Fetch all labels
+export function useLabels() {
+  return useQuery({
+    queryKey: ['labels'],
+    queryFn: () => fetch('/api/labels').then(res => res.json()),
+  })
+}
+
+export function useLabelMutations() {
+  const queryClient = useQueryClient()
+
+  const addLabel = useMutation<Label, unknown, Omit<Label, 'id'>>({
+    mutationFn: async labelData => {
+      const response = await fetch('/api/labels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(labelData),
+      })
+      if (!response.ok) throw new Error('Failed to create label')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['labels'] })
+    },
+  })
+
+  const updateLabel = useMutation<Label, unknown, { id: string } & Partial<Omit<Label, 'id'>>>({
+    mutationFn: async ({ id, ...data }) => {
+      const response = await fetch(`/api/labels/${id}`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(data),
+      })
+      if (!response.ok) throw new Error('Failed to update label')
+      return response.json()
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['labels'] })
+    },
+  })
+
+  const deleteLabel = useMutation<void, unknown, string>({
+    mutationFn: async id => {
+      const response = await fetch(`/api/labels/${id}`, {
+        method: 'DELETE',
+      })
+      if (!response.ok) throw new Error('Failed to delete label')
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['labels'] })
+      // This will also refresh todos to ensure deleted labels are removed from them
+      queryClient.invalidateQueries({ queryKey: ['todos'] })
+    },
+  })
+
+  return { addLabel, updateLabel, deleteLabel }
 }

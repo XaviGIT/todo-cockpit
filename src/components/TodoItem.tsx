@@ -6,10 +6,10 @@ import { Category } from '@/types/category'
 import { LabelPicker } from './LabelPicker'
 import { CategorySelect } from './CategorySelect'
 import { DatePicker } from './DatePicker'
+import { useLabels } from '@/app/hooks/api'
 
 interface Props {
   todo: Todo
-  labels: Label[]
   categories: Category[]
   onUpdate: (id: string, updates: Partial<Todo>) => void
   onDelete: (id: string) => void
@@ -17,7 +17,6 @@ interface Props {
 
 export function TodoItem({
   todo,
-  labels,
   categories,
   onUpdate,
   onDelete,
@@ -30,6 +29,8 @@ export function TodoItem({
   )
   const [editLabels, setEditLabels] = useState<string[]>(todo.labels || [])
   const [isHovering, setIsHovering] = useState(false)
+
+  const { data: labels = [], isLoading: loadingLabels } = useLabels()
 
   // Reset edit state when todo changes or when exiting edit mode
   useEffect(() => {
@@ -128,9 +129,9 @@ export function TodoItem({
                   placeholder="Task title"
                 />
               ) : (
-                <div className="flex items-center gap-2">
+                <div className="flex gap-2">
                   {todo.isImportant && !isEditing && (
-                    <span className="text-amber-500 mr-1">
+                    <span className="text-amber-500 mr-1 mt-0.5">
                       <svg
                         xmlns="http://www.w3.org/2000/svg"
                         width="18"
@@ -278,10 +279,10 @@ export function TodoItem({
                 </div>
               )}
 
-              {todo.labels.length > 0 && (
+              {todo.labels.length > 0 && !loadingLabels && (
                 <div className="flex flex-wrap gap-1.5">
                   {todo.labels.map(labelId => {
-                    const label = labels.find(l => l.id === labelId)
+                    const label = labels.find((l: Label) => l.id === labelId)
                     return label ? (
                       <span
                         key={label.id}
