@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { Todo } from '@/types/todo'
-import { TodoItem } from './TodoItem'
+import { TodoItem } from './todo/TodoItem'
 import { DatePicker } from './DatePicker'
 import { LabelPicker } from './LabelPicker'
 import { CategorySelect } from './CategorySelect'

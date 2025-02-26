@@ -3,10 +3,9 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import { Todo } from '@/types/todo'
-import { Label } from '@/types/label'
 import { Category } from '@/types/category'
 import { useTodoMutations } from '@/app/hooks/api'
-import { TodoItem } from './TodoItem'
+import { TodoItem } from './todo/TodoItem'
 
 interface Props {
   categories: Category[]
@@ -21,8 +20,6 @@ export function ImportantTasks({ categories }: Props) {
     queryKey: ['todos', 'all'],
     queryFn: () => fetch('/api/todos/all').then(res => res.json()),
   })
-
-  const [labels] = useState<Label[]>([])
 
   // Filter important todos
   const importantTodos = todos
@@ -171,7 +168,6 @@ export function ImportantTasks({ categories }: Props) {
             <div key={todo.id} className="todo-item relative">
               <TodoItem
                 todo={todo}
-                labels={labels}
                 categories={categories}
                 onUpdate={handleUpdateTodo}
                 onDelete={handleDeleteTodo}
