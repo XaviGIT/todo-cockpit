@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, SyntheticEvent } from 'react'
 import { useLabels, useLabelMutations } from '@/app/hooks/api'
+import { Label } from '@/types/label'
 
 interface Props {
   selectedLabels: string[]
@@ -73,7 +74,7 @@ export function LabelPicker({ selectedLabels, onChange }: Props) {
     )
   }
 
-  const handleDeleteLabel = (e: React.MouseEvent, labelId: string) => {
+  const handleDeleteLabel = (e: SyntheticEvent, labelId: string) => {
     e.stopPropagation()
 
     // First remove it from selected labels if it's selected
@@ -92,9 +93,8 @@ export function LabelPicker({ selectedLabels, onChange }: Props) {
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap gap-2">
-        {labels.map(label => {
+        {labels.map((label: Label) => {
           const isSelected = selectedLabels.includes(label.id)
-          const bgOpacity = isSelected ? '1' : '0.2'
 
           return (
             <button
@@ -112,7 +112,7 @@ export function LabelPicker({ selectedLabels, onChange }: Props) {
               style={{
                 backgroundColor: `${label.color}${isSelected ? '' : '33'}`,
                 color: isSelected ? 'white' : getContrastingTextColor(label.color),
-                ringColor: label.color,
+                // ringColor: label.color,
               }}
             >
               {isSelected && (

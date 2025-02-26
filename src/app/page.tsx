@@ -8,6 +8,7 @@ import { Category } from '@/types/category'
 import { useLocalStorage } from '@/app/hooks/useLocalStorage'
 import { ViewToggle } from '@/components/ViewToggle'
 import { ImportantTasks } from '@/components/ImportantTasks'
+import Image from 'next/image'
 
 export default function Home() {
   const { data: categories = [], isLoading: loadingCategories } = useCategories()
@@ -54,7 +55,13 @@ export default function Home() {
       <header className="w-full border-b border-gray-200 bg-white shadow-sm">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4 sm:px-6 lg:px-8">
           <div className="flex items-center gap-3">
-            <img src="cockpit.png" alt="ToDo Cockpit" className="w-14 rounded-full" />
+            <Image
+              src="/cockpit.png"
+              alt="ToDo Cockpit"
+              width={56}
+              height={56}
+              className="rounded-full"
+            />
             <h1 className="text-xl font-bold tracking-tight text-gray-900">ToDo Cockpit</h1>
           </div>
 
